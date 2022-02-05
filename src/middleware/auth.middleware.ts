@@ -11,12 +11,16 @@ async function authMiddleware(
   response: Response,
   next: NextFunction
 ) {
-  const cookies = request.cookies
-  if (cookies && cookies.Authorization) {
+  const headers = request.headers
+  if (headers && headers.authorization) {
+    const [scheme, token] = headers.authorization.split(' ')
+    if (!/^Bearer$/i.test(scheme))
+      return next(new WrongAuthenticationTokenException())
+
     const secret = process.env.JWT_SECRET
     try {
       const verificationResponse = jwt.verify(
-        cookies.Authorization,
+        token,
         secret
       ) as DataStoredInToken
       const id = verificationResponse._id

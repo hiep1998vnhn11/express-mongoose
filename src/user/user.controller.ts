@@ -31,16 +31,20 @@ class UserController implements Controller {
     response: Response,
     next: NextFunction
   ) => {
-    const id = request.params.id
-    const userQuery = this.user.findById(id)
-    if (request.query.withPosts === 'true') {
-      userQuery.populate('posts').exec()
-    }
-    const user = await userQuery
-    if (user) {
-      response.send(user)
-    } else {
-      next(new UserNotFoundException(id))
+    try {
+      const id = request.params.id
+      const userQuery = this.user.findById(id)
+      if (request.query.withPosts === 'true') {
+        userQuery.populate('posts').exec()
+      }
+      const user = await userQuery
+      if (user) {
+        response.send(user)
+      } else {
+        next(new UserNotFoundException(id))
+      }
+    } catch (err) {
+      next(new UserNotFoundException(request.params.id))
     }
   }
 

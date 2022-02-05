@@ -27,17 +27,20 @@ class AuthenticationService {
     }
   }
   public createCookie(tokenData: TokenData) {
-    return `Authorization=${tokenData.token}; HttpOnly; Max-Age=${tokenData.expiresIn}`
+    return `Authorization=${tokenData.access_token}; HttpOnly; Max-Age=${tokenData.expire_at}`
   }
   public createToken(user: User): TokenData {
-    const expiresIn = 60 * 60 // an hour
+    const { JWT_TTL } = process.env
+    const expire_at = 60 * 60 * Number(JWT_TTL)
     const secret = process.env.JWT_SECRET
     const dataStoredInToken: DataStoredInToken = {
       _id: user._id,
     }
     return {
-      expiresIn,
-      token: jwt.sign(dataStoredInToken, secret, { expiresIn }),
+      expire_at,
+      access_token: jwt.sign(dataStoredInToken, secret, {
+        expiresIn: expire_at,
+      }),
     }
   }
 }

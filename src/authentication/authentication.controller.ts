@@ -11,6 +11,7 @@ import User from '../user/user.interface'
 import userModel from './../user/user.model'
 import AuthenticationService from './authentication.service'
 import LogInDto from './logIn.dto'
+import authMiddleware from '../middleware/auth.middleware'
 
 class AuthenticationController implements Controller {
   public path = '/auth'
@@ -33,7 +34,13 @@ class AuthenticationController implements Controller {
       validationMiddleware(LogInDto),
       this.loggingIn
     )
+    this.router.get(`${this.path}/me`, authMiddleware, this.getMe)
     this.router.post(`${this.path}/logout`, this.loggingOut)
+  }
+
+  private getMe = (request: any, response: Response) => {
+    const user: User = request.user
+    response.send(user)
   }
 
   private registration = async (
@@ -67,8 +74,7 @@ class AuthenticationController implements Controller {
       )
       if (isPasswordMatching) {
         const tokenData = this.createToken(user)
-        response.setHeader('Set-Cookie', [this.createCookie(tokenData)])
-        response.send(user)
+        response.send(tokenData)
       } else {
         next(new WrongCredentialsException())
       }
@@ -78,23 +84,21 @@ class AuthenticationController implements Controller {
   }
 
   private loggingOut = (request: Request, response: Response) => {
-    response.setHeader('Set-Cookie', ['Authorization=;Max-age=0'])
     response.send(200)
   }
 
-  private createCookie(tokenData: TokenData) {
-    return `Authorization=${tokenData.token}; HttpOnly; Max-Age=${tokenData.expiresIn}`
-  }
-
   private createToken(user: User): TokenData {
-    const expiresIn = 60 * 60 // an hour
+    const { JWT_TTL } = process.env
+    const expire_at = 60 * 60 * Number(JWT_TTL)
     const secret = process.env.JWT_SECRET
     const dataStoredInToken: DataStoredInToken = {
       _id: user._id,
     }
     return {
-      expiresIn,
-      token: jwt.sign(dataStoredInToken, secret, { expiresIn }),
+      expire_at,
+      access_token: jwt.sign(dataStoredInToken, secret, {
+        expiresIn: expire_at,
+      }),
     }
   }
 }
